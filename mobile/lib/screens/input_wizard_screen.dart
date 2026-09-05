@@ -450,56 +450,100 @@ class InputWizardScreenState extends State<InputWizardScreen> {
     final schedule = _schedule;
     return Column(
       children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (_schedules.length > 1) ...[
-                  const Text('Sesi kunjungan hari ini',
-                      style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
-                  const SizedBox(height: 6),
-                  DropdownButtonFormField<int>(
-                    key: ValueKey('sesi-${_scheduleId ?? 'kosong'}'),
-                    initialValue: _scheduleId,
-                    isExpanded: true,
-                    items: _schedules
-                        .map((s) => DropdownMenuItem(
-                              value: s.id,
-                              child: Text(
-                                '${s.school.nama} — ${s.sesi == 'pagi' ? 'pagi' : 'siang'}',
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ))
-                        .toList(),
-                    onChanged: (v) => setState(() {
-                      _scheduleId = v;
-                      _notifyHeader();
-                      _refreshPesertaKe();
-                    }),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                if (schedule != null) ...[
-                  // Info sekolah gaya "info-row" (label kecil di atas, nilai 14).
-                  const _SchoolInfoRow(label: 'Nama sekolah'),
-                  Text(schedule.school.nama,
-                      style: AppType.bodyStrong),
-                  const SizedBox(height: AppSpacing.lg),
-                  const _SchoolInfoRow(label: 'NPSN'),
-                  Text(schedule.school.npsn, style: AppType.body),
-                  const SizedBox(height: AppSpacing.lg),
-                  const _SchoolInfoRow(label: 'Kab/Kota'),
-                  Text(schedule.school.kabKota, style: AppType.body),
-                  const SizedBox(height: AppSpacing.lg),
-                  const _SchoolInfoRow(label: 'Kecamatan'),
-                  Text(schedule.school.kecamatan, style: AppType.body),
-                ],
-              ],
+        // Dropdown sesi hanya muncul bila ada lebih dari satu jadwal hari ini.
+        if (_schedules.length > 1) ...[
+          const Padding(
+            padding: EdgeInsets.fromLTRB(12, 6, 12, 0),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Pilih sesi kunjungan', style: AppType.metaStrong),
             ),
           ),
-        ),
+          const SizedBox(height: 6),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: DropdownButtonFormField<int>(
+              key: ValueKey('sesi-${_scheduleId ?? 'kosong'}'),
+              initialValue: _scheduleId,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                prefixIcon: Icon(Icons.event_note_outlined, size: 20),
+              ),
+              items: _schedules
+                  .map((s) => DropdownMenuItem(
+                        value: s.id,
+                        child: Text(
+                          '${s.school.nama} — ${s.sesi == 'pagi' ? 'pagi' : 'siang'}',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ))
+                  .toList(),
+              onChanged: (v) => setState(() {
+                _scheduleId = v;
+                _notifyHeader();
+                _refreshPesertaKe();
+              }),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+        if (schedule != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header kompak: ikon + nama sekolah + sesi & tanggal.
+                    Row(
+                      children: [
+                        Container(
+                          height: 46,
+                          width: 46,
+                          decoration: BoxDecoration(
+                            color: AppColors.brandAccent.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          alignment: Alignment.center,
+                          child: const Icon(Icons.school_outlined,
+                              color: AppColors.brandAccent, size: 24),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                schedule.school.nama,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppType.bodyStrong,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${schedule.sesi == 'pagi' ? 'Sesi pagi' : 'Sesi siang'} · ${fmt.tanggalLengkap(schedule.tanggal)}',
+                                style: AppType.meta,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 24),
+                    // Info padat label-kiri-nilai-kanan (bukan label di atas nilai).
+                    _InfoRow(label: 'NPSN', value: schedule.school.npsn),
+                    _InfoRow(label: 'Kab/Kota', value: schedule.school.kabKota),
+                    _InfoRow(label: 'Kecamatan', value: schedule.school.kecamatan),
+                    _InfoRow(
+                        label: 'Target sesi',
+                        value: '${schedule.targetSiswa} siswa'),
+                  ],
+                ),
+              ),
+            ),
+          ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: SizedBox(
@@ -975,19 +1019,6 @@ class InputWizardScreenState extends State<InputWizardScreen> {
   }
 }
 
-/// Label kecil di atas nilai info sekolah (gaya info-row web).
-class _SchoolInfoRow extends StatelessWidget {
-  final String label;
-  const _SchoolInfoRow({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
-      child: Text(label, style: AppType.captionStrong),
-    );
-  }
-}
 
 class _Banner extends StatelessWidget {
   final String message;

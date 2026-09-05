@@ -6,7 +6,9 @@ plugins {
 
 android {
     namespace = "com.example.simlab_mobile"
-    compileSdk = flutter.compileSdkVersion
+    // flutter_secure_storage butuh SDK >= 37 (backward compatible — tidak
+    // memengaruhi versi Android minimum yang didukung).
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
