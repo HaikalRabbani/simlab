@@ -169,6 +169,12 @@ class ExaminationController extends Controller
                 ]);
             }
 
+            // Data yang diperbaiki lewat alur koreksi yang disetujui dikunci
+            // kembali — data final bersifat immutable (spec 8.6).
+            if ($examination->correctionRequests()->where('status', 'disetujui')->exists()) {
+                $examination->update(['is_locked' => true]);
+            }
+
             AuditLog::create([
                 'user_id' => $request->user()->id,
                 'examination_id' => $examination->id,

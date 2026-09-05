@@ -36,12 +36,25 @@ class ExaminationPolicy
 
     /**
      * Hanya petugas penginput, dan hanya bila data belum terkunci (belum terkirim final).
+     * Pengawas wilayah boleh memperbaiki data bila ada koreksi yang sudah disetujui
+     * dan pemeriksaan sedang terbuka (dibuka oleh approve) — spec 8.6.
      */
     public function update(User $user, Examination $examination): bool
     {
-        return $user->isPetugas()
-            && $examination->petugas_id === $user->id
-            && ! $examination->is_locked;
+        if ($user->isPetugas()) {
+            return $examination->petugas_id === $user->id && ! $examination->is_locked;
+        }
+
+        if ($user->isPengawas()) {
+            $school = $examination->school();
+
+            return $school !== null
+                && $school->kab_kota === $user->wilayah_scope
+                && ! $examination->is_locked
+                && $examination->correctionRequests()->where('status', 'disetujui')->exists();
+        }
+
+        return false;
     }
 
     /**

@@ -138,6 +138,13 @@ class CorrectionRequestController extends Controller
             'catatan_peninjau' => $data['catatan_peninjau'] ?? null,
         ]);
 
+        // Bila disetujui: buka kunci pemeriksaan supaya pengawas wilayah bisa
+        // memperbaiki datanya (petugas tidak bisa mengedit data terkirim — spec
+        // 8.6). Setelah perbaikan, ExaminationController::update mengunci kembali.
+        if ($status === 'disetujui') {
+            $correction->examination()->update(['is_locked' => false]);
+        }
+
         AuditLog::create([
             'user_id' => $user->id,
             'examination_id' => $correction->examination_id,

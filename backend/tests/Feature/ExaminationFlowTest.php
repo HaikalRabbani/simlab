@@ -228,6 +228,47 @@ class ExaminationFlowTest extends TestCase
         $this->assertDatabaseCount('audit_logs', 3); // submit + request_correction + approve
     }
 
+    public function test_pengawas_memperbaiki_data_setelah_koreksi_disetujui_dan_terkunci_lagi(): void
+    {
+        $petugas = User::factory()->petugas('Kota Bandung')->create();
+        $pengawas = User::factory()->pengawas('Kota Bandung')->create();
+        $school = $this->makeSchool();
+        $student = $this->makeStudent($school);
+        $this->schedulePetugas($petugas, $school);
+
+        Sanctum::actingAs($petugas);
+        $examinationId = $this->postJson('/api/examinations', $this->payload($student, [
+            'hasil' => $this->hasil('positif', 'MET'),
+            'rencana_tindak_lanjut' => 'rujuk_uji_konfirmasi',
+            'sampel_disegel' => true,
+            'kode_segel' => 'SG-1001',
+        ]))->json('id');
+
+        // Pengajuan koreksi oleh petugas
+        $correction = $this->postJson("/api/examinations/{$examinationId}/correction-request", [
+            'alasan' => 'Hasil MET salah input, seharusnya negatif.',
+        ])->assertCreated()->json();
+
+        // Pengawas wilayah menyetujui -> pemeriksaan terbuka untuk dikoreksi
+        Sanctum::actingAs($pengawas);
+        $this->postJson("/api/correction-requests/{$correction['id']}/approve")->assertOk();
+        $this->assertDatabaseHas('examinations', ['id' => $examinationId, 'is_locked' => false]);
+
+        // Pengawas memperbaiki data -> otomatis terkunci kembali (immutable)
+        $this->putJson("/api/examinations/{$examinationId}", $this->payload($student, [
+            'hasil' => $this->hasil('negatif'),
+            'rencana_tindak_lanjut' => null,
+            'sampel_disegel' => false,
+        ]))->assertOk()
+            ->assertJsonPath('is_locked', true)
+            ->assertJsonPath('hasil_ringkasan', 'Negatif semua');
+
+        // Petugas tidak bisa mengedit data yang sudah terkunci kembali
+        Sanctum::actingAs($petugas);
+        $this->putJson("/api/examinations/{$examinationId}", $this->payload($student))
+            ->assertStatus(403);
+    }
+
     public function test_riwayat_petugas_hanya_data_sendiri_dan_bisa_diffilter_tanggal(): void
     {
         $petugas = User::factory()->petugas('Kota Bandung')->create();

@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models.dart';
 
@@ -24,12 +24,18 @@ class Api {
   static String? _token;
   static User? _user;
 
+  /// Penyimpanan aman (Keychain iOS / Keystore Android) — spec 10: data sensitif
+  /// di perangkat wajib dienkripsi karena device petugas bisa hilang/dicuri.
+  /// Versi v9+ pakai EncryptedSharedPreferences/Keystore secara default di Android.
+  static final _secure = FlutterSecureStorage();
+  static const _kToken = 'simlab_token';
+  static const _kUser = 'simlab_user';
+
   static Future<void> saveAuth({required String token, required User user}) async {
     _token = token;
     _user = user;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('simlab_token', token);
-    await prefs.setString('simlab_user', jsonEncode({
+    await _secure.write(key: _kToken, value: token);
+    await _secure.write(key: _kUser, value: jsonEncode({
           'id': user.id,
           'nama': user.nama,
           'email': user.email,
@@ -40,9 +46,8 @@ class Api {
   }
 
   static Future<bool> restoreAuth() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('simlab_token');
-    final rawUser = prefs.getString('simlab_user');
+    final token = await _secure.read(key: _kToken);
+    final rawUser = await _secure.read(key: _kUser);
     if (token == null || rawUser == null) return false;
     _token = token;
     _user = User.fromJson(jsonDecode(rawUser) as Map<String, dynamic>);
@@ -52,9 +57,8 @@ class Api {
   static Future<void> clearAuth() async {
     _token = null;
     _user = null;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('simlab_token');
-    await prefs.remove('simlab_user');
+    await _secure.delete(key: _kToken);
+    await _secure.delete(key: _kUser);
   }
 
   static User? get user => _user;

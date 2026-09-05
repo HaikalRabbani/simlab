@@ -38,22 +38,34 @@ class DashboardData
 
     /**
      * Rentang periode dari query param: mulai/sampai, atau tahun.
+     * Input tanggal yang tidak valid diabaikan (fallback ke default) —
+     * tidak melempar 500 ke pengguna.
      */
     public static function periodeRange(Request $request): array
     {
-        $sampai = $request->filled('sampai')
-            ? Carbon::parse($request->input('sampai'))
-            : now();
+        $sampai = self::parseTanggal($request->input('sampai')) ?? now();
 
-        $mulai = $request->filled('mulai')
-            ? Carbon::parse($request->input('mulai'))
-            : Carbon::create($request->integer('tahun', $sampai->year), 1, 1);
+        $mulai = self::parseTanggal($request->input('mulai'))
+            ?? Carbon::create($request->integer('tahun', $sampai->year), 1, 1);
 
         if ($mulai->gt($sampai)) {
             [$mulai, $sampai] = [$sampai, $mulai];
         }
 
         return [$mulai->startOfDay(), $sampai->endOfDay()];
+    }
+
+    private static function parseTanggal(?string $value): ?Carbon
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($value);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     /**
