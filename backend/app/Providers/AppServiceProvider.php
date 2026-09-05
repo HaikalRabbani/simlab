@@ -26,5 +26,11 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('login', function (Request $request) {
             return Limit::perMinute(10)->by($request->ip());
         });
+
+        // Rate limiting global seluruh API (eksplisit + bisa diatur via env).
+        RateLimiter::for('api', function (Request $request) {
+            return Limit::perMinute((int) env('API_RATE_LIMIT', 120))
+                ->by($request->user()?->id ?: $request->ip());
+        });
     }
 }

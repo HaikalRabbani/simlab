@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
+use App\Models\TestStripStock;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -81,6 +82,15 @@ class UserController extends Controller
 
         if ($user->id === $request->user()->id) {
             return response()->json(['message' => 'Tidak bisa menghapus akun sendiri.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        // Keamanan data: user yang punya pemeriksaan/jadwal/stok tidak boleh dihapus
+        // karena FK cascade akan menghapus data pemeriksaan yang sudah final.
+        if ($user->examinations()->exists() || $user->schedules()->exists()
+            || TestStripStock::where('petugas_id', $user->id)->exists()) {
+            return response()->json([
+                'message' => 'Pengguna ini memiliki data pemeriksaan/jadwal/stok dan tidak dapat dihapus.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
         $before = $user->toArray();

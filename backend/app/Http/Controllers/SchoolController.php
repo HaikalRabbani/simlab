@@ -56,8 +56,18 @@ class SchoolController extends Controller
         return response()->json(School::create($data), Response::HTTP_CREATED);
     }
 
-    public function show(School $school): JsonResponse
+    public function show(Request $request, School $school): JsonResponse
     {
+        $user = $request->user();
+
+        $accessible = $user->isDinas()
+            || ($user->isPengawas() && $school->kab_kota === $user->wilayah_scope)
+            || ($user->isPetugas() && $school->schedules()->where('petugas_id', $user->id)->exists());
+
+        if (! $accessible) {
+            return response()->json(['message' => 'Anda tidak berhak melihat sekolah ini.'], Response::HTTP_FORBIDDEN);
+        }
+
         return response()->json($school->loadCount('students'));
     }
 
@@ -74,6 +84,14 @@ class SchoolController extends Controller
     public function destroy(Request $request, School $school): JsonResponse
     {
         $this->authorizeDinas($request);
+
+        // Keamanan data: sekolah dengan siswa (dan riwayat pemeriksaan) tidak boleh
+        // dihapus — FK cascade akan menghapus data pemeriksaan yang sudah final.
+        if ($school->students()->exists()) {
+            return response()->json([
+                'message' => 'Sekolah memiliki data siswa/pemeriksaan dan tidak dapat dihapus.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
 
         $school->delete();
 

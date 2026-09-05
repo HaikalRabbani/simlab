@@ -18,11 +18,12 @@ class TestStripStockController extends Controller
     {
         $user = $request->user();
 
-        $query = TestStripStock::query()->with('school:id,npsn,nama');
-
-        if ($user->isPetugas()) {
-            $query->where('petugas_id', $user->id);
+        // Modul stok khusus petugas — pengawas/dinas tidak melihat stok per petugas.
+        if (! $user->isPetugas()) {
+            return response()->json(['message' => 'Hanya petugas lapangan yang mengelola stok.'], Response::HTTP_FORBIDDEN);
         }
+
+        $query = TestStripStock::query()->with('school:id,npsn,nama')->where('petugas_id', $user->id);
 
         if ($request->filled('parameter')) {
             $query->where('parameter', $request->input('parameter'));
@@ -45,7 +46,7 @@ class TestStripStockController extends Controller
     public function show(Request $request, TestStripStock $stock): JsonResponse
     {
         $user = $request->user();
-        if ($user->isPetugas() && $stock->petugas_id !== $user->id) {
+        if (! $user->isPetugas() || $stock->petugas_id !== $user->id) {
             return response()->json(['message' => 'Stok ini bukan milik Anda.'], Response::HTTP_FORBIDDEN);
         }
 

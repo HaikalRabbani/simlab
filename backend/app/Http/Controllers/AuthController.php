@@ -25,7 +25,10 @@ class AuthController extends Controller
             ]);
         }
 
-        // Hapus token lama perangkat ini supaya tidak menumpuk
+        // Hapus semua token lama user sebelum membuat yang baru — mencegah
+        // penumpukan token & membatalkan token lama (termasuk yang bocor)
+        // saat login ulang.
+        $user->tokens()->delete();
         $token = $user->createToken('simlab-app')->plainTextToken;
 
         return response()->json([

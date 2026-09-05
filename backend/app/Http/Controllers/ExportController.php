@@ -152,6 +152,12 @@ class ExportController extends Controller
     {
         $value = (string) ($value ?? '');
 
+        // Cegah CSV formula injection: nilai diawali =, +, -, @ dapat dieksekusi
+        // sebagai formula oleh Excel/Spreadsheet saat file dibuka.
+        if (in_array($value[0] ?? '', ['=', '+', '-', '@'], true)) {
+            $value = "'" . $value;
+        }
+
         return (str_contains($value, ';') || str_contains($value, '"') || str_contains($value, "\n"))
             ? '"'.str_replace('"', '""', $value).'"'
             : $value;
