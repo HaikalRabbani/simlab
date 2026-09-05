@@ -1,0 +1,29 @@
+# ===== Secrets & env files (safety net for all subprojects) =====
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.pfx
+*.key
+*.jks
+*.keystore
+
+# ===== OS files =====
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ===== Editor / IDE =====
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ===== Logs =====
+*.log
+
+# ===== Misc =====
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
